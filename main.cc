@@ -6,12 +6,13 @@
 extern "C" {
     
     EMSCRIPTEN_KEEPALIVE
-    void testFunction(){
+    GLuint testFunction(){
         EM_ASM({
             console.log('it works')
         });
 
         GLuint id;
         glGenTextures(1, &id);
+        return id;
     }
 }

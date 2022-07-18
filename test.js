@@ -10,12 +10,10 @@ const createContext = () => {
         drawCtx = canvas.getContext('webgl2')
     }
 
-    // const handle = XRC.GL.registerContext(drawCtx)
-    // XRC.GL.makeContextCurrent(handle)
+    const handle = XRC.GL.registerContext(drawCtx, drawCtx.getContextAttributes())
+    XRC.GL.makeContextCurrent(handle)
 
 }
-
-const onError = (e) => console.log(e)
 
 const XRCPromise = window.WebAssembly ? new Promise((resolve) => {
     XRCReady().then((Module) => {
@@ -29,8 +27,8 @@ const XRCPromise = window.WebAssembly ? new Promise((resolve) => {
 const XRCPromise_ = XRCPromise.then((xrc_) => {
     XRC = xrc_
     createContext()
-    XRC._testFunction()
-
+    id = XRC._testFunction()
+    console.log(id)
 })
 
 

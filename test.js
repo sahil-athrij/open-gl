@@ -10,7 +10,7 @@ const createContext = () => {
         drawCtx = canvas.getContext('webgl2')
     }
 
-    const handle = XRC.GL.registerContext(drawCtx, drawCtx.getContextAttributes())
+    const handle = XRC.GL().registerContext(drawCtx, drawCtx.getContextAttributes())
     XRC.GL.makeContextCurrent(handle)
 
 }

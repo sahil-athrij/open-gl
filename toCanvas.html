@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>WebGl to canvas</title>
+    <style>
+        @import url("https://webglfundamentals.org/webgl/resources/webgl-tutorials.css");
+
+        body {
+            margin: 0;
+        }
+
+        canvas {
+            overflow: scroll;
+            /*width: 100vw;*/
+            /*height: 100vh;*/
+            /*display: block;*/
+        }
+    </style>
+</head>
+<body>
+<div id="xr-overlay">
+    <br>
+    <br>
+    <br>
+    <button id="btn">Click</button>
+    <button id="shutter">Shutter</button>
+    <div id="console" style="color: teal"></div>
+    <img id="img" width="200px" height="200px" style="border: blue 1px solid">
+    <canvas hidden id="camera-out" width="200px" height="200px" style="border: red 1px solid"></canvas>
+</div>
+<canvas id="canvas"></canvas>
+<!-- vertex shader -->
+<!--<script id="drawImage-vertex-shader" type="x-shader/x-vertex">-->
+<!--attribute vec4 a_position;-->
+<!--attribute vec2 a_texcoord;-->
+
+<!--uniform mat4 u_matrix;-->
+
+<!--varying vec2 v_texcoord;-->
+
+<!--void main() {-->
+<!--   gl_Position = u_matrix * a_position;-->
+<!--   v_texcoord = a_texcoord;-->
+<!--}-->
+
+
+<!--</script>-->
+<!--<script id="drawImage-fragment-shader" type="x-shader/x-fragment">-->
+<!--precision mediump float;-->
+
+<!--varying vec2 v_texcoord;-->
+
+<!--uniform sampler2D u_texture;-->
+
+<!--void main() {-->
+<!--   gl_FragColor = texture2D(u_texture, v_texcoord);-->
+<!--}-->
+
+
+
+
+
+
+
+
+
+
+
+
+
+<!--</script>-->
+
+<!--
+for most samples webgl-utils only provides shader compiling/linking and
+canvas resizing because why clutter the examples with code that's the same in every sample.
+See https://webglfundamentals.org/webgl/lessons/webgl-boilerplate.html
+and https://webglfundamentals.org/webgl/lessons/webgl-resizing-the-canvas.html
+for webgl-utils, m3, m4, and webgl-lessons-ui.
+-->
+<script src="https://webglfundamentals.org/webgl/resources/webgl-utils.js"></script>
+<script src="https://webglfundamentals.org/webgl/resources/m4.js"></script>
+
+<script>
+    let out_canvas = document.getElementById("camera-out");
+    let vid = document.getElementById("vid")
+    let cameraSelector = document.querySelector('select#videoSource');
+    let shutter = document.getElementById("shutter");
+    let btn = document.getElementById("btn");
+    let debug_console = document.getElementById("console");
+    let session;
+    let xrSession;
+    let glBinding;
+    let texture;
+    let textureInfo;
+    let gl;
+    let data; // Pixel Data.
+    let img = document.getElementById('img');
+    let readback_pixels;
+
+    // Get A WebGL context
+    /** @type {HTMLCanvasElement} */
+    var canvas = document.querySelector("#canvas");
+    gl = canvas.getContext("webgl", {
+        xrCompatible: true
+    });
+
+    btn.addEventListener('click', async function () {
+        try {
+            session = await navigator.xr.requestSession("immersive-ar", {
+                requiredFeatures: ["camera-access", "dom-overlay"],
+                domOverlay: {
+                    root: document.getElementById("xr-overlay")
+                }
+            });
+        } catch (e) {
+            error(e);
+        }
+
+        print('Session created.')
+        try {
+            await onSessionStarted();
+        } catch (e) {
+            error(e);
+        }
+    })
+
+    shutter.addEventListener('click', function () {
+        print('Shutter clicked.')
+        try {
+            // img.src = URL.createObjectURL(
+            //     new Blob([data.buffer] /* (1) */)
+            // );
+            let dest_ctx = out_canvas.getContext('webgl');
+            // print(canvas.width, 'Canvas width');
+            // print(canvas.toDataURL(), 'Data URL')
+            // print(out_canvas.width, 'Canvas_out width');
+            let imageData = new ImageData(new Uint8ClampedArray(readback_pixels), 864, 1920, null);
+            dest_ctx.putImageData(readback_pixels, 0, 0)
+            // dest_ctx.drawImage(imageData, 0, 0);
+        } catch (e) {
+            error(e);
+        }
+    })
+
+    async function onSessionStarted() {
+        xrSession = session;
+
+        session.addEventListener('end', onSessionEnded);
+        // let canvas = document.createElement('canvas');
+        // gl = canvas.getContext('webgl', {
+        //     xrCompatible: true
+        // });
+
+        glBinding = new XRWebGLBinding(session, gl);
+
+        // Init any GL thingies you want here.
+
+        session.updateRenderState({baseLayer: new XRWebGLLayer(session, gl)});
+        xrRefSpace = await session.requestReferenceSpace('viewer');
+        print('Reference space requested.')
+        session.requestAnimationFrame(onXRFrameLoggingWrapper);
+    }
+
+
+    function onSessionEnded() {
+        print('Session ended.')
+    }
+
+    function onXRFrameLoggingWrapper(t, frame) {
+        try {
+            onXRFrame(t, frame);
+        } catch (e) {
+            error(e);
+        }
+    }
+
+    function onXRFrame(t, frame) {
+        let session = frame.session;
+        session.requestAnimationFrame(onXRFrameLoggingWrapper);
+        let pose = frame.getViewerPose(xrRefSpace);
+
+        if (pose) {
+            // gl.bindFramebuffer(gl.FRAMEBUFFER, session.renderState.baseLayer.framebuffer);
+
+            gl.clearColor(0, 0, 0, 0);
+
+            // Clear the framebuffer
+            gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+
+            gl.enable(gl.DEPTH_TEST);
+
+            for (let view of pose.views) {
+                let viewport = session.renderState.baseLayer.getViewport(view);
+
+                gl.viewport(viewport.x, viewport.y,
+                    viewport.width, viewport.height);
+
+                // For an application working in viewport space, get the camera intrinsics
+                // based on the viewport dimensions:
+                getCameraIntrinsics(view.projectionMatrix, viewport);
+
+                if (view.camera) {
+                    // For an application working in camera texture space, get the camera
+                    // intrinsics based on the camera texture width/height which may be
+                    // different from the XR framebuffer width/height.
+                    //
+                    // Note that the camera texture has origin at bottom left, and the
+                    // returned intrinsics are based on that convention. If a library
+                    // has a different coordinate convention, the coordinates would
+                    // need to be adjusted, for example mirroring the Y coordinate if
+                    // the origin needs to be at the top left.
+                    const cameraViewport = {
+                        width: view.camera.width,
+                        height: view.camera.height,
+                        x: 0,
+                        y: 0
+                    };
+                    getCameraIntrinsics(view.projectionMatrix, cameraViewport);
+
+                    // Update camera image texture.
+                    texture = glBinding.getCameraImage(view.camera);
+
+                    const texture_bytes = view.camera.width * view.camera.height * 4;
+                    readback_pixels = new Uint8Array(texture_bytes);
+
+
+                    readback_framebuffer = gl.createFramebuffer();
+
+
+                    gl.bindTexture(gl.TEXTURE_2D, texture);
+                    gl.bindFramebuffer(gl.FRAMEBUFFER, readback_framebuffer);
+                    gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0,
+                        gl.TEXTURE_2D, texture, 0);
+
+                    gl.readPixels(0, 0, view.camera.width, view.camera.height,
+                        gl.RGBA, gl.UNSIGNED_BYTE, readback_pixels);
+
+                    console.log(readback_pixels)
+
+
+                    // Draw the triangle
+
+
+                    // print(data)
+
+                    // gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
+
+
+                    // drawImage(
+                    //     texture,
+                    //     view.camera.width,
+                    //     view.camera.width,
+                    //     0, 1);
+                }
+                // print(texture, 'Texture')
+            }
+        }
+    }
+
+
+    function getCameraIntrinsics(projectionMatrix, viewport) {
+        const p = projectionMatrix;
+        // Principal point in pixels (typically at or near the center of the viewport)
+        let u0 = (1 - p[8]) * viewport.width / 2 + viewport.x;
+        let v0 = (1 - p[9]) * viewport.height / 2 + viewport.y;
+        // Focal lengths in pixels (these are equal for square pixels)
+        let ax = viewport.width / 2 * p[0];
+        let ay = viewport.height / 2 * p[5];
+        // Skew factor in pixels (nonzero for rhomboid pixels)
+        let gamma = viewport.width / 2 * p[4];
+
+        // Print the calculated intrinsics, but once per unique value to
+        // avoid log spam. These can change every frame for some XR devices.
+        const intrinsicString = (
+            "intrinsics: u0=" + u0 + " v0=" + v0 + " ax=" + ax + " ay=" + ay +
+            " gamma=" + gamma + " for viewport {width=" +
+            viewport.width + ",height=" + viewport.height + ",x=" +
+            viewport.x + ",y=" + viewport.y + "}");
+        // print(intrinsicString, 'Intrinsics String.')
+        // if (!intrinsicsPrinted[intrinsicString]) {
+        //     console.log("projection:", Array.from(projectionMatrix).join(", "));
+        //     console.log(intrinsicString);
+        //     intrinsicsPrinted[intrinsicString] = true;
+        // }
+    }
+
+
+    function print(text, label = '') {
+        let currentTime = new Date().toLocaleTimeString();
+        debug_console.innerText += '\n[' + currentTime + '] ' + label + ' : ' + text;
+    }
+
+    function error(text) {
+        let currentTime = new Date().toLocaleTimeString();
+        debug_console.innerText += '\n{' + currentTime + '}: ' + text;
+    }
+
+    // main();
+
+</script>
+</body>
+</html>

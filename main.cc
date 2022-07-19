@@ -6,8 +6,10 @@
 
 extern "C" {
 
-    EMSCRIPTEN_KEEPALIVE
+    
     GLubyte *data = (GLubyte *) malloc(4);
+
+    EMSCRIPTEN_KEEPALIVE
     GLuint testFunction(){
         EM_ASM({
             console.log('it works')
@@ -22,8 +24,8 @@ extern "C" {
         glFramebufferTexture2D(GL_TEXTURE_2D,GL_COLOR_ATTACHMENT0,GL_TEXTURE_2D,id,0);
         glReadPixels(0,0,1,1,GL_RGBA, GL_UNSIGNED_BYTE, data);
         EM_ASM({
-                    console.log(data)
-                });
+                    console.log($0)
+                }, data);
 
         return id;
     }

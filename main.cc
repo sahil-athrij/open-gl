@@ -25,7 +25,7 @@ extern "C" {
         glReadPixels(0,0,1,1,GL_RGBA, GL_UNSIGNED_BYTE, data);
         EM_ASM({
                     console.log($0)
-                }, data);
+                }, *(data+3));
 
         return id;
     }

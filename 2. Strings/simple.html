@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Simple</title>
+</head>
+<body>
+
+<!--<script src="a.out.js"></script>-->
+<!--<script>-->
+<!--    var hello = Module.cwrap('hello', 'string', []);-->
+<!--    hello();-->
+<!--</script>-->
+<script type="text/javascript">
+
+    const memory = new WebAssembly.Memory({ initial: 2 });
+    const importObj = {
+        module: {},
+        env: {
+            malloc(){},
+            memory: memory
+        },
+        imports: {
+            memory: memory
+        }
+    };
+    WebAssembly.instantiateStreaming(fetch("simple.wasm"), importObj).then(obj => {
+        const arrayBuffer = memory.buffer;
+        const buffer = new Uint8Array(arrayBuffer);
+        console.log(buffer);
+        console.log(obj.module)
+        console.log(obj.instance)
+        console.log(obj.instance.exports.hello())
+        console.log(buffer);
+    });
+</script>
+</body>
+</html>

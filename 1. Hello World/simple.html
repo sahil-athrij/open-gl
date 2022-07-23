@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Simple</title>
+</head>
+<body>
+
+
+<script type="text/javascript">
+    const importObj = {
+        module: {}
+    };
+    WebAssembly.instantiateStreaming(fetch("simple.wasm"), importObj).then(obj => {
+        console.log(obj.instance.exports.square(5))
+    });
+</script>
+</body>
+</html>

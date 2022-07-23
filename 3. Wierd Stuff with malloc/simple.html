@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Simple</title>
+</head>
+<body>
+<script type="text/javascript">
+    let bufferTop = 0;
+
+    const memory = new WebAssembly.Memory({ initial: 2 });
+    const importObj = {
+        module: {},
+        env: {
+            malloc(size) {
+                let temp = bufferTop;
+                bufferTop += size;
+                return temp;
+            },
+            // malloc(){
+            //     console.log("malloc() called but not included in the build - add '_malloc' to EXPORTED_FUNCTIONS");
+            // },
+            memory: memory
+        },
+        imports: {
+            memory: memory
+        }
+    };
+    WebAssembly.instantiateStreaming(fetch("simple.wasm"), importObj).then(obj => {
+        const arrayBuffer = memory.buffer;
+        const buffer = new Uint8Array(arrayBuffer);
+        console.log(buffer);
+        console.log(obj.module)
+        console.log(obj.instance)
+        console.log(obj.instance.exports.hello())
+        console.log(buffer);
+    });
+</script>
+</body>
+</html>

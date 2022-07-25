@@ -27,6 +27,16 @@ const index = (x, y, z) => {
 }
 
 let k = 0
+for (let i = 0; i < canvas.height; i++){
+    for (let j = 0; j <  canvas.width; j++){
+        pixBuffer[index(i,j,0)] = k
+        pixBuffer[index(i,j,1)] = 0.5 * k
+        pixBuffer[index(i,j,2)] = 255
+        pixBuffer[index(i,j,3)] = 150
+    }
+    k += 1
+}
+k=0
 for (let i = 0; i < height; i++){
     for (let j = 0; j <  width; j++){
         pixBuffer[index(i,j,0)] = k
@@ -40,5 +50,35 @@ for (let i = 0; i < height; i++){
 const imageData = new ImageData(pixBuffer, canvas.width)
 ctx.putImageData(imageData, 0, 0)
 
+
+
+function drawRotatedImage(ctx) {
+    // ctx.clearRect(0, 0, width, height);
+    ctx.save();
+
+    ctx.scale(1,-1);
+    // ctx.transform(1,0,1,-1,0,0);
+    ctx.drawImage(canvas, 0, 0,width,height,0,0,width,-height);
+
+    ctx.restore();
+
+
+}
+
+function drawRotatedImageScaleToFull(ctx) {
+    // ctx.clearRect(0, 0, width, height);
+    ctx.save();
+
+    ctx.scale(1,-1);
+    // ctx.transform(1,0,1,-1,0,0);
+    ctx.drawImage(canvas, 0, 0,width,height,0,0,canvas.width,-canvas.height);
+
+    ctx.restore();
+
+
+}
+
+
+drawRotatedImageScaleToFull(ctx);
 
 // I need to scale and flip it to fit the screen

@@ -26,13 +26,15 @@ const index = (x, y, z) => {
     return (z + (y * 4) + (x * 4 * canvas.width))
 }
 
+let k = 0
 for (let i = 0; i < height; i++){
     for (let j = 0; j <  width; j++){
-        pixBuffer[index(i,j,0)] = 100
-        pixBuffer[index(i,j,1)] = 200
+        pixBuffer[index(i,j,0)] = k
+        pixBuffer[index(i,j,1)] = 0.5 * k
         pixBuffer[index(i,j,2)] = 150
         pixBuffer[index(i,j,3)] = 255
     }
+    k += 1
 }
 
 const imageData = new ImageData(pixBuffer, canvas.width)
